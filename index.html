@@ -1,0 +1,96 @@
+<html>
+<head>
+<link href="css/cupertino/jquery-ui-1.10.4.custom.css" rel="stylesheet">
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="js/jquery-ui-1.10.4.custom.js"></script>
+<script>
+function parseUrl( url ) {
+    var a = document.createElement('a');
+    a.href = url;
+    return a;
+}
+$(document).ready(function() {
+  $("#goButton").click(function() {
+    if ($("#url").val() != "" && $("#url").val().toLowerCase().substring(0,4) == "http") {
+    toggleLoading(true);  
+    $.ajax({
+        url: "/sniffer/sniffer.php?url=" + encodeURIComponent($("#url").val())
+      }).done(function( data ) {
+        if (data.substring(0,7) == "Failure" || data == "Unable to load the address!") {
+          $("#results").html("<span class=\"ui-state-error ui-corner-all\">Failed to retrieve data from " + $("#url").val() + "</span>");
+          toggleLoading(false);
+        } else {
+          $("#results").html("");
+          console.log(data);
+          var hits = JSON.parse("[" + data + "]");
+          var hitUrl;
+          var queryParams;
+          var row;
+
+          $("#results").append("<table class=\"hit\">");
+          for (hit = 0; hit < hits.length; hit++) {
+              hitUrl = parseUrl(hits[hit].url);              
+              
+              // Host
+              row = "<tr><td class=\"hitLabel\">Host: </td><td class\"hitValue\">" + hitUrl.protocol + "//" + hitUrl.host + "</td></tr>";
+
+              // DCSID
+              row += "<tr><td class=\"hitLabel\">DCSID: </td><td class\"hitValue\">" + hitUrl.pathname.substring(1,31) + "</td></tr>";
+
+              // Params Header
+              row += "<tr><td colspan=\"2\" class=\"paramsHeader\">Params: </td></tr>";
+
+              // Query params
+              queryParams = hitUrl.search.substring(1).split("&");              
+              for (param = 0; param < queryParams.length; param++) {                       
+              $("#results").append("<table class=\"hit\">");
+                if (queryParams[param] != "") {
+                  row += "<tr><td class=\"hitLabel\">" + queryParams[param].split("=")[0] + ": </td><td class\"hitValue\">" + decodeURIComponent(queryParams[param].split("=")[1].replace(/%25/gi,"%")) + "</td></tr>";
+                }
+              }
+              
+              // Create separator
+              if (hit < (hits.length - 1)) {
+                row += "<tr><td colspan=\"2\"><hr /></td></tr>";
+              }
+
+              // Append rows
+              $("#results").append(row);
+            } 
+
+            $("#results").append("</table>");
+          }
+        toggleLoading(false);
+      });
+    } else {
+       $("#results").html("<span class=\"ui-state-error ui-corner-all\">Invalid URL: " + $("#url").val() + "!!</span>");
+    }
+  });
+});
+function toggleLoading(loading) {
+  if (loading) {
+    $("#loading").show();
+    $("#results").hide();
+  } else {
+    $("#loading").hide();
+    $("#results").show();
+  }
+}
+</script>
+<style>
+#loading {
+  display:none;
+}
+#goButton {
+  display:block;
+}
+</style>
+</head>
+<body>
+Enter a URL:
+<input type="text" id="url" value="http://www.webtrends.com"/>
+<button id="goButton" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only"><span class="ui-button-text">GO</span></button>
+<img id="loading" width="250" src="loadingGif.gif" />
+<div id="results"></div>
+</body>
+</html>
